@@ -17,8 +17,48 @@ stages:
   jobs:  
   - job: Build
     displayName: Build
+
     pool:
       vmImage: $(vmImageName)
     variables:
     - group: Release
     steps:
+    - task: Maven@4
+      inputs:
+        mavenPomFile: 'Maven pom.xml'
+        options: '-DskipITs --settings ./maven/settings.xml'
+        publishJUnitResults: false
+        javaHomeOption: 'JDKVersion'
+        mavenVersionOption: 'Default'
+        mavenAuthenticateFeed: false
+        effectivePomSkip: false
+        sonarQubeRunAnalysis: false
+      
+    - task: CopyFiles@2
+      inputs:
+        SourceFolder: '$(Build.SourcesDirectory)'
+        Contents: |
+          target/myshuttledev*.war
+          *.sql
+        TargetFolder: '$(Build.ArtifactStagingDirectory)'
+      
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'acrconnection'
+        repository: '$(webRepository)'
+        command: 'buildAndPush'
+        Dockerfile: '$(dockerfilePath)'
+        buildContext: '$(Build.ArtifactStagingDirectory)'
+        tags: |
+            $(tag)
+    
+    - task: AzureMysqlDeployment@1
+      inputs:
+        azureSubscription: 'Java Connection'
+        ServerName: '$(ServerName).mysql.database.azure.com'
+        DatabaseName: '$(DatabaseName)'
+        SqlUsername: '$(SqlUsername)'
+        SqlPassword: '$(SqlPassword)'
+        TaskNameSelector: 'SqlTaskFile'
+        SqlFile: '$(Build.SourcesDirectory)/CreateMYSQLDB.sql'
+        IpDetectionMethod: 'AutoDetect'
