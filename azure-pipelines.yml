@@ -25,7 +25,7 @@ stages:
     steps:
     - task: Maven@4
       inputs:
-        mavenPomFile: 'Maven pom.xml'
+        mavenPomFile: '$(Build.SourcesDirectory)/pom.xml'
         options: '-DskipITs --settings ./maven/settings.xml'
         publishJUnitResults: false
         javaHomeOption: 'JDKVersion'
